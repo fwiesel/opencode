@@ -131,6 +131,32 @@ describe("OpenAICompatiblePlugin", () => {
     ),
   )
 
+  it.live("lets config disable a discovered model that reports no mode", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(serve),
+      ({ server }) =>
+        Effect.gen(function* () {
+          const config = yield* Config.Test
+          const models = yield* Model.Service
+          const providerID = Provider.ID.make("litellm")
+          yield* config.setEntries([
+            configuration({
+              litellm: {
+                package: "@ai-sdk/openai-compatible",
+                settings: { baseURL: `${server.url.origin}/v1` },
+                models: { "untyped-model": { disabled: true } },
+              },
+            }),
+          ])
+          yield* addPlugins()
+
+          yield* eventually(models.get(providerID, Model.ID.make("discovered-model")), (model) => model !== undefined)
+          expect(yield* models.get(providerID, Model.ID.make("untyped-model"))).toMatchObject({ enabled: false })
+        }),
+      ({ server }) => Effect.promise(() => server.stop(true)),
+    ),
+  )
+
   it.live("discovers keyless providers and prefers a stored key over the configured one", () =>
     Effect.acquireUseRelease(
       Effect.sync(serve),

@@ -88,7 +88,8 @@ such as LiteLLM:
 
 - Discovery authenticates with the saved key, an `env` variable, or `settings.apiKey`, and sends the provider `headers`.
 - Discovery only adds missing models. Models listed under `models` keep their configuration.
-- Models that report a non-chat `mode`, such as embedding models, are skipped.
+- Models that report a non-chat `mode`, such as embedding models, are skipped. Entries without a `mode` are treated as
+  chat models; hide one by listing it under `models` with `"disabled": true`.
 - The list refreshes every five minutes and after config or credential changes, and survives temporary outages.
 - Discovered models use the same defaults as a model listed without settings. Override them under `models`.
 - Ollama, LM Studio, and vLLM keep their own [discovery](/models#local).
