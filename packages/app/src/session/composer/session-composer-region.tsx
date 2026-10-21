@@ -1,8 +1,17 @@
-import { Show, type JSX } from "solid-js"
+import { createMemo, Match, Switch, type JSX } from "solid-js"
+import type { FormInfo, PermissionRequest } from "@opencode/client/promise"
 import { SessionPermissionDock } from "@/session/requests/session-permission-dock"
 import { SessionQuestionDock } from "@/session/requests/session-question-dock"
 import { SessionWebSearchDock } from "@/session/requests/session-websearch-dock"
 import type { SessionComposerRegionController } from "./session-composer-region-controller"
+import { ComposerMorph } from "./spring-height"
+
+type Face = {
+  key: string
+  kind: "websearch" | "question" | "permission" | "composer" | "subagent" | "none"
+  question?: FormInfo
+  permission?: PermissionRequest
+}
 
 type SessionComposerRegionState = Pick<
   SessionComposerRegionController["state"],
@@ -21,6 +30,22 @@ export function SessionComposerRegion(props: {
 }) {
   const controller = props.controller
 
+  const face = createMemo((): Face => {
+    const websearch = controller.state.websearch.request()
+
+    if (websearch) return { key: `websearch:${websearch.id}`, kind: "websearch" }
+    const question = controller.state.questionRequest()
+
+    if (question) return { key: `question:${question.id}`, kind: "question", question }
+    const permission = controller.state.permissionRequest()
+
+    if (permission) return { key: `permission:${permission.id}`, kind: "permission", permission }
+
+    if (!controller.showComposer()) return { key: "none", kind: "none" }
+
+    return controller.child() ? { key: "subagent", kind: "subagent" } : { key: "composer", kind: "composer" }
+  })
+
   return (
     <div
       ref={controller.setDockRef}
@@ -34,43 +59,36 @@ export function SessionComposerRegion(props: {
           "md:max-w-session md:mx-auto": controller.centered(),
         }}
       >
-        <Show when={controller.state.websearch.request()}>
-          <SessionWebSearchDock model={controller.state.websearch} onSubmit={controller.onResponseSubmit} />
-        </Show>
-        <Show when={controller.state.questionRequest()} keyed>
-          {(request) => (
-            <div>
-              <SessionQuestionDock request={request} onSubmit={controller.onResponseSubmit} />
-            </div>
+        <ComposerMorph face={face()}>
+          {(current) => (
+            <Switch>
+              <Match when={current().kind === "websearch"}>
+                <SessionWebSearchDock model={controller.state.websearch} onSubmit={controller.onResponseSubmit} />
+              </Match>
+              <Match when={current().question}>
+                {(request) => <SessionQuestionDock request={request()} onSubmit={controller.onResponseSubmit} />}
+              </Match>
+              <Match when={current().permission}>
+                {(request) => (
+                  <SessionPermissionDock
+                    request={request()}
+                    responding={controller.state.permissionResponding()}
+                    onDecide={(response) => {
+                      controller.onResponseSubmit()
+                      controller.state.decide(response)
+                    }}
+                  />
+                )}
+              </Match>
+              <Match when={current().kind === "subagent"}>
+                <div class="relative z-[70]">{props.subagent}</div>
+              </Match>
+              <Match when={current().kind === "composer"}>
+                <div class="relative z-[70]">{props.composer}</div>
+              </Match>
+            </Switch>
           )}
-        </Show>
-
-        <Show when={controller.state.permissionRequest()} keyed>
-          {(request) => (
-            <div>
-              <SessionPermissionDock
-                request={request}
-                responding={controller.state.permissionResponding()}
-                onDecide={(response) => {
-                  controller.onResponseSubmit()
-                  controller.state.decide(response)
-                }}
-              />
-            </div>
-          )}
-        </Show>
-
-        <Show when={controller.showComposer()}>
-          <div
-            classList={{
-              "relative z-[70]": true,
-            }}
-          >
-            <Show when={controller.child()} fallback={<Show when={!controller.state.blocked()}>{props.composer}</Show>}>
-              {props.subagent}
-            </Show>
-          </div>
-        </Show>
+        </ComposerMorph>
       </div>
     </div>
   )

@@ -69,6 +69,18 @@
   background: var(--v2-background-bg-layer-01);
 }
 
+[data-slot="composer-morph"][data-moving]:not(:has([data-component="session-queue-panel"]))
+  :is(
+    [data-component="composer"],
+    [data-component="dock-prompt"],
+    [data-component="session-websearch-dock"],
+    [data-component="subagent-bar"]
+  ) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
 [data-color-scheme="dark"] [data-component="composer-suggestions"] [data-active] {
   background: var(--v2-alpha-light-10);
 }
