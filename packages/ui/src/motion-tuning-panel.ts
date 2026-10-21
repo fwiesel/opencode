@@ -10,7 +10,10 @@ const global = "Global"
  * mount, so importing this module costs nothing until then. Works anywhere a surface registered its knobs, including
  * Storybook stories. Returns its removal.
  */
-export function mountMotionPanel(container: HTMLElement, options: { title?: string; section?: string } = {}) {
+export function mountMotionPanel(
+  container: HTMLElement,
+  options: { title?: string; section?: string; onClose?: () => void } = {},
+) {
   let unmount: (() => void) | undefined
   let disposed = false
   let section = options.section
@@ -114,6 +117,7 @@ export function mountMotionPanel(container: HTMLElement, options: { title?: stri
       const stopPanel = controls.mount(container, {
         theme: "auto",
         title: options.title ?? "Motion",
+        onClose: options.onClose,
         tabs: sections,
         tab: section,
         onTab: (id) => (section = id),

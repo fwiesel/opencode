@@ -64,7 +64,7 @@ const setup: Setup<typeof Debug> = (ctx) => {
           // The Motion workspace opens only from the debug bar's MOTION cell, and shows while the bar does.
           <Show when={visible() && motion()}>
             <Suspense>
-              <Motion title={ctx.t("motion.title")} />
+              <Motion title={ctx.t("motion.title")} onClose={toggleMotion} />
             </Suspense>
           </Show>
         )}
