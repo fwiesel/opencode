@@ -196,6 +196,13 @@ OpenCode applies provider values first, model values second, and the selected va
 - Header names are matched case-insensitively.
 - Options are provider-specific and may be ignored or rejected by another provider package.
 
+For native OpenAI, Anthropic, Gemini, and generic OpenAI-compatible adapters, an explicit `settings.baseURL` also loads
+model IDs from `{baseURL}/models` at startup and after configuration or credential changes. The endpoint replaces the catalog's model
+list; matching IDs retain catalog metadata. Generic OpenAI-compatible gateways also add new IDs with the
+[custom-model defaults](#aliases); native adapters only filter existing models. Explicit model entries
+still take precedence. Paginated discovery has a five-second timeout; failures retain the same endpoint/account's last
+inventory or the catalog. Ollama, LM Studio, and vLLM use their dedicated discovery instead.
+
 ## Aliases
 
 Use `modelID` to give an API model a friendlier catalog ID:
