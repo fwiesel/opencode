@@ -9,9 +9,10 @@ import { Plugin } from "@opencode/core/plugin"
 import { PluginHost } from "@opencode/core/plugin/host"
 import { make } from "@opencode/core/plugin/provider/openai-compatible"
 import { Provider } from "@opencode/core/provider"
+import { withEnv } from "../fixture/env"
 import { Document, Event, Info } from "@opencode/schema/config"
 import { describe, expect } from "bun:test"
-import { type Duration, Effect, Layer, Schema } from "effect"
+import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
 
@@ -19,11 +20,11 @@ const it = testEffect(Layer.merge(PluginTestLayer, Config.testLayer()))
 const decode = Schema.decodeUnknownSync(Info)
 
 // Registers the config plugin first, matching production order, so discovery sees configured providers.
-const addPlugins = Effect.fn(function* (interval: Duration.Input = "1 hour") {
+const addPlugins = Effect.fn(function* () {
   const plugin = yield* Plugin.Service
   const host = yield* PluginHost.make(plugin)
   yield* ConfigProviderPlugin.Plugin.effect(host)
-  yield* make(interval).effect(host)
+  yield* make().effect(host)
 })
 
 function eventually<A>(
@@ -38,27 +39,6 @@ function eventually<A>(
     yield* Effect.promise(() => Bun.sleep(1))
     return yield* eventually(effect, predicate, remaining - 1)
   })
-}
-
-function withEnv<A, E, R>(vars: Record<string, string | undefined>, effect: () => Effect.Effect<A, E, R>) {
-  return Effect.acquireUseRelease(
-    Effect.sync(() => {
-      const previous = Object.fromEntries(Object.keys(vars).map((key) => [key, process.env[key]]))
-      Object.entries(vars).forEach(([key, value]) => {
-        if (value === undefined) delete process.env[key]
-        else process.env[key] = value
-      })
-      return previous
-    }),
-    effect,
-    (previous) =>
-      Effect.sync(() =>
-        Object.entries(previous).forEach(([key, value]) => {
-          if (value === undefined) delete process.env[key]
-          else process.env[key] = value
-        }),
-      ),
-  )
 }
 
 function serve() {
@@ -271,14 +251,15 @@ describe("OpenAICompatiblePlugin", () => {
             }),
           ]
           yield* config.setEntries(entries("/first/v1"))
-          yield* addPlugins("5 millis")
+          yield* addPlugins()
           yield* eventually(models.get(providerID, Model.ID.make("discovered-model")), (model) => model !== undefined)
 
           state.failing = true
           const failed = requests.length
+          yield* bus.publish(Event.Updated, {})
           yield* eventually(
             Effect.sync(() => requests.length),
-            (count) => count > failed + 2,
+            (count) => count > failed,
           )
           expect(yield* models.get(providerID, Model.ID.make("discovered-model"))).toBeDefined()
 

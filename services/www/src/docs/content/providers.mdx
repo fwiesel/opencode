@@ -91,7 +91,7 @@ such as LiteLLM:
   keep their configuration.
 - Models that report a non-chat `mode`, such as embedding models, are skipped. Entries without a `mode` are treated as
   chat models; hide one by listing it under `models` with `"disabled": true`.
-- The list refreshes every five minutes and after config or credential changes, and survives temporary outages.
+- The list refreshes at startup and after config or credential changes, and survives temporary outages.
 - Discovered models use the same defaults as a model listed without settings. Override them under `models`.
 - Ollama, LM Studio, and vLLM keep their own [discovery](/models#local).
 - Disable discovery with `"plugins": ["-opencode.provider.openai-compatible"]`.

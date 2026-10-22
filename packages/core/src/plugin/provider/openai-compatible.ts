@@ -1,6 +1,6 @@
 import { define } from "@opencode/plugin/effect/plugin"
 import type { Document, Entry } from "@opencode/schema/config"
-import { type Duration, Effect, Semaphore, Stream } from "effect"
+import { Effect, Semaphore, Stream } from "effect"
 import { HttpClient } from "effect/http"
 import { Bus } from "../../bus.js"
 import { Config } from "../../config.js"
@@ -14,7 +14,7 @@ import { foldSettings } from "./configured.js"
 // These providers have dedicated discovery plugins that own their whole model list.
 const dedicated = new Set(["ollama", "lmstudio", "vllm"])
 
-export function make(interval: Duration.Input = "5 minutes") {
+export function make() {
   return define({
     id: "opencode.provider.openai-compatible",
     effect: Effect.fn(function* (ctx) {
@@ -118,11 +118,9 @@ export function make(interval: Duration.Input = "5 minutes") {
         Effect.forkScoped({ startImmediately: true }),
       )
       yield* bus
-        .subscribe(Credential.Event.Switched)
+        .subscribe([Credential.Event.Updated, Credential.Event.Switched])
         .pipe(Stream.runForEach(refresh), Effect.forkScoped({ startImmediately: true }))
-      // Settle availability before the first model list is served, then re-discover on the interval.
       yield* refresh()
-      yield* Effect.sleep(interval).pipe(Effect.andThen(refresh), Effect.forever, Effect.ignore, Effect.forkScoped)
     }),
   } satisfies PluginInternal.InternalPlugin)
 }
